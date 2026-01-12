@@ -2,7 +2,6 @@ import type { FC } from "react"
 import { useAuthContext } from "../contexts/AuthContext"
 import logoSvg from "../images/logo.svg"
 import { cn } from "../utils/cn"
-import { ConnectWallet } from "./ConnectWallet"
 import styles from "./Header.module.css"
 import { NotificationsIndicator } from "./notifications/NotificationsIndicator"
 
@@ -33,9 +32,6 @@ export const Header: FC<HeaderProps> = ({ className }) => {
       </a>
       <div className="flex flex-row justify-end items-center gap-2">
         {isAuthenticated && <NotificationsIndicator />}
-        <div>
-          <ConnectWallet showNetwork={true} />
-        </div>
       </div>
     </header>
   )

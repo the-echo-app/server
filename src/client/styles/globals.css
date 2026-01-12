@@ -96,11 +96,6 @@
       }
     }
   }
-
-  /* Hide RainbowKit network switcher like in v2 */
-  [aria-label="Switch Networks"] {
-    @apply !hidden;
-  }
 }
 
 /* Custom utility classes */

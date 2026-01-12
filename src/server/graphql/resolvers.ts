@@ -2,7 +2,7 @@ import { GraphQLError } from "graphql"
 import { SiweMessage } from "siwe"
 import { clientConfig } from "../../shared/config/client"
 import { serverConfig } from "../../shared/config/server"
-import { POST_TYPE } from "../../shared/constants"
+import { POST_STATUS, POST_TYPE } from "../../shared/constants"
 import { GraphQLErrorCode } from "../../shared/graphql/errors"
 import { AuthService } from "../auth"
 import {
@@ -141,35 +141,42 @@ export function createResolvers(serverApp: ServerApp): Resolvers {
   }
 
   // Helper to map post to PostSummary
-  const mapPostToSummary = (post: any) => ({
-    id: post.id,
-    userId: post.userId,
-    author: {
-      id: post.author.id,
-      userId: post.author.userId,
-      username: post.author.username,
-      ageRange: null, // Not included in summary
-      occupation: null,
-      city: post.author.city,
+  const mapPostToSummary = (post: any) => {
+    const isDeleted = post.status === POST_STATUS.DELETED
+    return {
+      id: post.id,
+      userId: post.userId,
+      author: {
+        id: post.author.id,
+        userId: post.author.userId,
+        username: post.author.username,
+        ageRange: null, // Not included in summary
+        occupation: null,
+        city: post.author.city,
+        createdAt: post.createdAt,
+      },
+      type: post.type,
+      status: post.status,
+      parentId: post.parentId || null,
+      duration: post.duration,
+      tags: post.tags || [],
+      waveformUrl: isDeleted ? null : post.waveformUrl || null,
+      responseCount: post.responseCount,
+      bookmarkCount: post.bookmarkCount,
+      isBookmarked: post.isBookmarked,
       createdAt: post.createdAt,
-    },
-    type: post.type,
-    parentId: post.parentId || null,
-    duration: post.duration,
-    tags: post.tags || [],
-    waveformUrl: post.waveformUrl || null,
-    responseCount: post.responseCount,
-    bookmarkCount: post.bookmarkCount,
-    isBookmarked: post.isBookmarked,
-    createdAt: post.createdAt,
-  })
+    }
+  }
 
   // Helper to map post to full Post
-  const mapPostToFull = (post: any) => ({
-    ...mapPostToSummary(post),
-    audioUrl: post.audioUrl,
-    city: post.city,
-  })
+  const mapPostToFull = (post: any) => {
+    const isDeleted = post.status === POST_STATUS.DELETED
+    return {
+      ...mapPostToSummary(post),
+      audioUrl: isDeleted ? null : post.audioUrl,
+      city: post.city,
+    }
+  }
 
   // Helper to map profile for GraphQL
   const mapProfileToGraphQL = (profile: any) => ({

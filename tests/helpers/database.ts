@@ -17,7 +17,7 @@ import type {
   UserProfile,
 } from "@server/db/schema"
 import { serverConfig } from "@shared/config/server"
-import { AUTH_METHOD, POST_TYPE } from "@shared/constants"
+import { AUTH_METHOD, POST_STATUS, POST_TYPE } from "@shared/constants"
 import { testLogger } from "@tests/helpers/logger"
 import { sql } from "drizzle-orm"
 
@@ -428,6 +428,7 @@ export async function createTestPost(postData: {
   city?: string
   type?: "POST" | "RESPONSE"
   parentId?: number
+  status?: "AWAITING_PROCESSING" | "PROCESSED" | "DELETED"
 }): Promise<Post> {
   const db = getTestDb()
 
@@ -438,6 +439,7 @@ export async function createTestPost(postData: {
     duration: 30,
     tags: [],
     city: "singapore",
+    status: POST_STATUS.AWAITING_PROCESSING,
     ...postData,
   }
 
@@ -451,9 +453,27 @@ export async function createTestPost(postData: {
     id: post.id,
     userId: post.userId,
     type: post.type,
+    status: post.status,
   })
 
   return post
+}
+
+/**
+ * Update post status directly in database (for testing)
+ */
+export async function updateTestPostStatus(
+  postId: number,
+  status: "AWAITING_PROCESSING" | "PROCESSED" | "DELETED",
+): Promise<void> {
+  const db = getTestDb()
+
+  await db
+    .update(schema.posts)
+    .set({ status, updatedAt: new Date() })
+    .where(sql`id = ${postId}`)
+
+  testLogger.info("📝 Test post status updated:", { postId, status })
 }
 
 /**

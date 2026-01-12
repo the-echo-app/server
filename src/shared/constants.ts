@@ -56,6 +56,17 @@ export const POST_TYPE = {
 export type PostType = (typeof POST_TYPE)[keyof typeof POST_TYPE]
 
 /**
+ * Post processing status
+ */
+export const POST_STATUS = {
+  AWAITING_PROCESSING: "AWAITING_PROCESSING",
+  PROCESSED: "PROCESSED",
+  DELETED: "DELETED",
+} as const
+
+export type PostStatus = (typeof POST_STATUS)[keyof typeof POST_STATUS]
+
+/**
  * Legal content types
  */
 export const LEGAL_CONTENT_TYPE = {

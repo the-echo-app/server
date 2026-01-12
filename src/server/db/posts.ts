@@ -1,5 +1,9 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm"
-import { POST_TYPE, type PostType } from "../../shared/constants"
+import {
+  POST_TYPE,
+  type PostStatus,
+  type PostType,
+} from "../../shared/constants"
 import {
   bookmarks,
   type NewPost,
@@ -423,6 +427,22 @@ export async function updatePostWaveformUrl(
     await db
       .update(posts)
       .set({ waveformUrl, updatedAt: new Date() })
+      .where(eq(posts.id, postId))
+  })
+}
+
+/**
+ * Update post status (called by background worker after processing)
+ */
+export async function updatePostStatus(
+  db: DatabaseOrTransaction,
+  postId: number,
+  status: PostStatus,
+): Promise<void> {
+  return db.startSpan("db.posts.updatePostStatus", async () => {
+    await db
+      .update(posts)
+      .set({ status, updatedAt: new Date() })
       .where(eq(posts.id, postId))
   })
 }

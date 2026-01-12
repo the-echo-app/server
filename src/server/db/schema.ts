@@ -24,6 +24,12 @@ export const ageRangeEnum = pgEnum("age_range", [
 
 export const postTypeEnum = pgEnum("post_type", ["POST", "RESPONSE"])
 
+export const postStatusEnum = pgEnum("post_status", [
+  "AWAITING_PROCESSING",
+  "PROCESSED",
+  "DELETED",
+])
+
 // Settings table for application configuration
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
@@ -173,6 +179,7 @@ export const posts = pgTable(
     bookmarkCount: integer("bookmark_count").default(0).notNull(),
     city: text("city").default("singapore").notNull(),
     active: boolean("active").default(true).notNull(),
+    status: postStatusEnum("status").default("AWAITING_PROCESSING").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -187,6 +194,7 @@ export const posts = pgTable(
     parentIdIdx: index("posts_parent_id_idx").on(table.parentId),
     createdAtIdx: index("posts_created_at_idx").on(table.createdAt),
     activeIdx: index("posts_active_idx").on(table.active),
+    statusIdx: index("posts_status_idx").on(table.status),
     bookmarkCountIdx: index("posts_bookmark_count_idx").on(table.bookmarkCount),
     responseCountIdx: index("posts_response_count_idx").on(table.responseCount),
   }),

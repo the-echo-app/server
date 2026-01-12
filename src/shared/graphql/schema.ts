@@ -88,6 +88,13 @@ export const typeDefs = gql`
     RESPONSE
   }
 
+  # Post status enum
+  enum PostStatus {
+    AWAITING_PROCESSING
+    PROCESSED
+    DELETED
+  }
+
   # Sort options for lists
   enum SortBy {
     NEWEST
@@ -115,6 +122,7 @@ export const typeDefs = gql`
     userId: PositiveInt!
     author: UserProfile!
     type: PostType!
+    status: PostStatus!
     parentId: PositiveInt
     duration: PositiveInt!
     tags: [String!]!
@@ -131,8 +139,9 @@ export const typeDefs = gql`
     userId: PositiveInt!
     author: UserProfile!
     type: PostType!
+    status: PostStatus!
     parentId: PositiveInt
-    audioUrl: String!
+    audioUrl: String
     duration: PositiveInt!
     tags: [String!]!
     waveformUrl: String
