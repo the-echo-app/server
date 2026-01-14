@@ -21,6 +21,8 @@
     "build": "bun run scripts/build.ts",
     "prod": "bun run scripts/prod.ts",
     "test": "bun run scripts/test.ts",
+    "test:db": "docker compose -f docker-compose.test.yaml up -d && docker compose -f docker-compose.test.yaml logs -f",
+    "test:db:stop": "docker compose -f docker-compose.test.yaml down",
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
     "lint:fix": "bun run typecheck && biome check --write .",
