@@ -210,6 +210,111 @@ describe("GraphQL Bookmarks", () => {
     })
   })
 
+  describe("bookmarkCount", () => {
+    it("should return correct bookmark count after operations", async () => {
+      const post = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+      })
+
+      const getPostQuery = {
+        query: `
+          query GetPostById($id: PositiveInt!) {
+            getPostById(id: $id) {
+              id
+              bookmarkCount
+            }
+          }
+        `,
+        variables: {
+          id: post.id,
+        },
+      }
+
+      const initialResponse = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(getPostQuery),
+      })
+
+      const initialBody = await initialResponse.json()
+      expect(initialBody.data.getPostById.bookmarkCount).toBe(0)
+
+      await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            mutation BookmarkPost($postId: PositiveInt!) {
+              bookmarkPost(postId: $postId) {
+                success
+              }
+            }
+          `,
+          variables: {
+            postId: post.id,
+          },
+        }),
+      })
+
+      const afterBookmarkResponse = await makeRequest(
+        `${testServer.url}/graphql`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify(getPostQuery),
+        },
+      )
+
+      const afterBookmarkBody = await afterBookmarkResponse.json()
+      expect(afterBookmarkBody.data.getPostById.bookmarkCount).toBe(1)
+
+      await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            mutation RemoveBookmark($postId: PositiveInt!) {
+              removeBookmark(postId: $postId) {
+                success
+              }
+            }
+          `,
+          variables: {
+            postId: post.id,
+          },
+        }),
+      })
+
+      const afterRemoveResponse = await makeRequest(
+        `${testServer.url}/graphql`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify(getPostQuery),
+        },
+      )
+
+      const afterRemoveBody = await afterRemoveResponse.json()
+      expect(afterRemoveBody.data.getPostById.bookmarkCount).toBe(0)
+    })
+  })
+
   describe("getMyBookmarks", () => {
     it("should return user bookmarks", async () => {
       const post1 = await createTestPost({

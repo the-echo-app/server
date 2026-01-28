@@ -247,6 +247,60 @@ describe("GraphQL Pulse Stats", () => {
       expect(tiredTag.count).toBe(40)
     })
 
+    it("should allow pulse stats with zero count and percentage", async () => {
+      const { dbManager, schema } = await import("@server/db/connection")
+      const db = dbManager.getDb()
+
+      await db.insert(schema.pulseStats).values({
+        city: "test-city",
+        period: "7d",
+        tag: "zero-tag",
+        count: 0,
+        percentage: 0,
+      })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetPulseStats($city: String!, $period: String!) {
+              getPulseStats(city: $city, period: $period) {
+                city
+                period
+                tags {
+                  tag
+                  count
+                  percentage
+                }
+              }
+            }
+          `,
+          variables: {
+            city: "test-city",
+            period: "7d",
+          },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+
+      if (body.errors) {
+        testLogger.error("getPulseStats with zero count failed:", body.errors)
+        throw new Error(body.errors[0].message)
+      }
+
+      expect(body.data.getPulseStats.tags).toHaveLength(1)
+      const zeroTag = body.data.getPulseStats.tags[0]
+      expect(zeroTag.tag).toBe("zero-tag")
+      expect(zeroTag.count).toBe(0)
+      expect(zeroTag.percentage).toBe(0)
+    })
+
     it("should return empty tags array for city/period with no data", async () => {
       const response = await makeRequest(`${testServer.url}/graphql`, {
         method: "POST",

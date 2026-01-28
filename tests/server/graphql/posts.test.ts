@@ -153,6 +153,51 @@ describe("GraphQL Posts", () => {
   })
 
   describe("getPostById", () => {
+    it("should return posts with zero response and bookmark counts", async () => {
+      const post = await createTestPost({
+        userId: testUserId,
+        audioUrl: "https://example.com/audio/fresh.webm",
+        audioKey: "audio/test/fresh.webm",
+        duration: 30,
+        tags: ["new"],
+        city: "singapore",
+      })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetPostById($id: PositiveInt!) {
+              getPostById(id: $id) {
+                id
+                responseCount
+                bookmarkCount
+              }
+            }
+          `,
+          variables: {
+            id: post.id,
+          },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+
+      if (body.errors) {
+        testLogger.error("getPostById with zero counts failed:", body.errors)
+        throw new Error(body.errors[0].message)
+      }
+
+      expect(body.data.getPostById).toBeDefined()
+      expect(body.data.getPostById.responseCount).toBe(0)
+      expect(body.data.getPostById.bookmarkCount).toBe(0)
+    })
+
     it("should return a single post with audio URL", async () => {
       const post = await createTestPost({
         userId: testUserId,

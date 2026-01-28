@@ -7,6 +7,7 @@ export const typeDefs = gql`
   scalar DateTime
   scalar JSON
   scalar PositiveInt
+  scalar NonNegativeInt
   scalar BigInt
 
   type Notification {
@@ -127,8 +128,8 @@ export const typeDefs = gql`
     duration: PositiveInt!
     tags: [String!]!
     waveformUrl: String
-    responseCount: PositiveInt!
-    bookmarkCount: PositiveInt!
+    responseCount: NonNegativeInt!
+    bookmarkCount: NonNegativeInt!
     isBookmarked: Boolean!
     createdAt: DateTime!
   }
@@ -145,8 +146,8 @@ export const typeDefs = gql`
     duration: PositiveInt!
     tags: [String!]!
     waveformUrl: String
-    responseCount: PositiveInt!
-    bookmarkCount: PositiveInt!
+    responseCount: NonNegativeInt!
+    bookmarkCount: NonNegativeInt!
     isBookmarked: Boolean!
     city: String!
     createdAt: DateTime!
@@ -162,7 +163,7 @@ export const typeDefs = gql`
   # Pulse statistics for tag analytics
   type PulseTagStat {
     tag: String!
-    count: PositiveInt!
+    count: NonNegativeInt!
     percentage: Float!
   }
 

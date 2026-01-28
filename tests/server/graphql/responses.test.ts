@@ -96,6 +96,80 @@ describe("GraphQL Responses", () => {
       expect(body.data.createResponse.tags).toContain("answer")
     })
 
+    it("should return correct response count after creating response", async () => {
+      const parentPost = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+      })
+
+      const getPostQuery = {
+        query: `
+          query GetPostById($id: PositiveInt!) {
+            getPostById(id: $id) {
+              id
+              responseCount
+            }
+          }
+        `,
+        variables: {
+          id: parentPost.id,
+        },
+      }
+
+      const initialResponse = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(getPostQuery),
+      })
+
+      const initialBody = await initialResponse.json()
+      expect(initialResponse.status).toBe(200)
+
+      if (initialBody.errors) {
+        testLogger.error("getPostById failed:", initialBody.errors)
+        throw new Error(initialBody.errors[0].message)
+      }
+
+      expect(initialBody.data.getPostById.responseCount).toBe(0)
+
+      await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            mutation CreateResponse($parentId: PositiveInt!, $audioKey: String!, $duration: PositiveInt!) {
+              createResponse(parentId: $parentId, audioKey: $audioKey, duration: $duration) {
+                id
+              }
+            }
+          `,
+          variables: {
+            parentId: parentPost.id,
+            audioKey: "audio/test/response-count.webm",
+            duration: 15,
+          },
+        }),
+      })
+
+      const afterResponse = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(getPostQuery),
+      })
+
+      const afterBody = await afterResponse.json()
+      expect(afterBody.data.getPostById.responseCount).toBe(1)
+    })
+
     it("should increment parent post response count", async () => {
       const parentPost = await createTestPost({
         userId: testUserId,
@@ -135,7 +209,6 @@ describe("GraphQL Responses", () => {
 
       expect(createBody.data.createResponse.parentId).toBe(parentPost.id)
 
-      // Verify the response was created by fetching responses for the parent post
       const getResponse = await makeRequest(`${testServer.url}/graphql`, {
         method: "POST",
         headers: {

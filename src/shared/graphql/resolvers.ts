@@ -5,6 +5,7 @@ import {
   GraphQLBigInt,
   GraphQLDateTime,
   GraphQLJSON,
+  GraphQLNonNegativeInt,
   GraphQLPositiveInt,
 } from "graphql-scalars"
 
@@ -13,5 +14,6 @@ export const defaultResolvers = {
   BigInt: GraphQLBigInt,
   DateTime: GraphQLDateTime,
   JSON: GraphQLJSON,
+  NonNegativeInt: GraphQLNonNegativeInt,
   PositiveInt: GraphQLPositiveInt,
 }
