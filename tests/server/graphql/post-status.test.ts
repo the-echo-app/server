@@ -63,7 +63,7 @@ describe("Post Status", () => {
           variables: {
             audioKey: "audio/test/new-post.webm",
             duration: 45,
-            tags: ["test"],
+            tags: ["grateful"],
           },
         }),
       })

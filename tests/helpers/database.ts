@@ -437,7 +437,7 @@ export async function createTestPost(postData: {
     audioUrl: "https://example.com/audio/test.webm",
     audioKey: "audio/test/test.webm",
     duration: 30,
-    tags: [],
+    tags: ["reflective"],
     city: "singapore",
     status: POST_STATUS.AWAITING_PROCESSING,
     ...postData,

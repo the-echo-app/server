@@ -1,4 +1,9 @@
-import { AUTH_METHOD, POST_STATUS, POST_TYPE } from "@shared/constants"
+import {
+  AUTH_METHOD,
+  POST_STATUS,
+  POST_TYPE,
+  SENTIMENT_TAGS,
+} from "@shared/constants"
 import { eq } from "drizzle-orm"
 import { dbManager, schema } from "./connection"
 import type { NewBookmark, NewPost, NewUser, NewUserProfile } from "./schema"
@@ -48,18 +53,7 @@ export async function seedDatabase(
     "Manager",
     "Freelancer",
   ]
-  const tagOptions = [
-    ["life", "thoughts"],
-    ["music", "art"],
-    ["tech", "startup"],
-    ["food", "travel"],
-    ["fitness", "health"],
-    ["books", "learning"],
-    ["work", "career"],
-    ["family", "relationships"],
-    ["hobbies", "fun"],
-    ["news", "opinions"],
-  ]
+  const tagOptions = SENTIMENT_TAGS.slice(0, NUM_POSTS)
 
   console.log(`  Creating ${NUM_USERS} users with profiles...`)
   const userIds: number[] = []
@@ -101,7 +95,7 @@ export async function seedDatabase(
       audioUrl: `https://example.com/audio/post${i + 1}.webm`,
       audioKey: `audio/posts/post${i + 1}.webm`,
       duration: 30 + i * 5,
-      tags: tagOptions[i],
+      tags: [tagOptions[i]],
       city: CITY,
       status: POST_STATUS.PROCESSED,
       responseCount: RESPONSES_PER_POST,

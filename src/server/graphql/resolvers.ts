@@ -1165,6 +1165,14 @@ export function createResolvers(serverApp: ServerApp): Resolvers {
             return mapPostToFull(postWithAuthor!)
           } catch (error) {
             if (error instanceof GraphQLError) throw error
+            if (
+              error instanceof Error &&
+              error.message.includes("sentiment tag")
+            ) {
+              throw new GraphQLError(error.message, {
+                extensions: { code: GraphQLErrorCode.INVALID_INPUT },
+              })
+            }
             logger.error("Failed to create post:", error)
             throw new GraphQLError("Failed to create post", {
               extensions: { code: GraphQLErrorCode.DATABASE_ERROR },

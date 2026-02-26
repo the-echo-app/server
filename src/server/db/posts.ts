@@ -3,6 +3,7 @@ import {
   POST_TYPE,
   type PostStatus,
   type PostType,
+  SENTIMENT_TAGS,
 } from "../../shared/constants"
 import {
   bookmarks,
@@ -268,6 +269,15 @@ export async function getPosts(
   })
 }
 
+function validatePostTag(tags?: string[]): void {
+  if (!tags || tags.length !== 1) {
+    throw new Error("Posts must have exactly one sentiment tag")
+  }
+  if (!SENTIMENT_TAGS.includes(tags[0] as any)) {
+    throw new Error(`Invalid sentiment tag: ${tags[0]}`)
+  }
+}
+
 /**
  * Create a new post
  */
@@ -283,6 +293,8 @@ export async function createPost(
   },
 ): Promise<Post> {
   return db.startSpan("db.posts.createPost", async () => {
+    validatePostTag(data.tags)
+
     const newPost: NewPost = {
       userId: data.userId,
       type: POST_TYPE.POST,

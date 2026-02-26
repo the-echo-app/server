@@ -320,12 +320,12 @@ describe("GraphQL Bookmarks", () => {
       const post1 = await createTestPost({
         userId: testUserId,
         city: "singapore",
-        tags: ["first"],
+        tags: ["grateful"],
       })
       const post2 = await createTestPost({
         userId: testUserId,
         city: "singapore",
-        tags: ["second"],
+        tags: ["hopeful"],
       })
 
       await createTestBookmark({ userId: testUserId, postId: post1.id })

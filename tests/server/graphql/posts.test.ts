@@ -48,7 +48,7 @@ describe("GraphQL Posts", () => {
         audioUrl: "https://example.com/audio/test1.webm",
         audioKey: "audio/test/test1.webm",
         duration: 30,
-        tags: ["test", "hello"],
+        tags: ["grateful"],
         city: "singapore",
       })
 
@@ -57,7 +57,7 @@ describe("GraphQL Posts", () => {
         audioUrl: "https://example.com/audio/test2.webm",
         audioKey: "audio/test/test2.webm",
         duration: 45,
-        tags: ["world"],
+        tags: ["hopeful"],
         city: "singapore",
       })
 
@@ -110,13 +110,13 @@ describe("GraphQL Posts", () => {
     it("should return posts without tags filter", async () => {
       await createTestPost({
         userId: testUserId,
-        tags: ["stressed", "work"],
+        tags: ["stressed"],
         city: "singapore",
       })
 
       await createTestPost({
         userId: testUserId,
-        tags: ["happy", "weekend"],
+        tags: ["joyful"],
         city: "singapore",
       })
 
@@ -159,7 +159,7 @@ describe("GraphQL Posts", () => {
         audioUrl: "https://example.com/audio/fresh.webm",
         audioKey: "audio/test/fresh.webm",
         duration: 30,
-        tags: ["new"],
+        tags: ["excited"],
         city: "singapore",
       })
 
@@ -204,7 +204,7 @@ describe("GraphQL Posts", () => {
         audioUrl: "https://example.com/audio/test.webm",
         audioKey: "audio/test/test.webm",
         duration: 30,
-        tags: ["test"],
+        tags: ["peaceful"],
         city: "singapore",
       })
 
@@ -251,6 +251,7 @@ describe("GraphQL Posts", () => {
         "https://example.com/audio/test.webm",
       )
       expect(body.data.getPostById.duration).toBe(30)
+      expect(body.data.getPostById.tags).toEqual(["peaceful"])
     })
 
     it("should return null for non-existent post", async () => {
@@ -349,7 +350,7 @@ describe("GraphQL Posts", () => {
           variables: {
             audioKey: "audio/test/new-post.webm",
             duration: 45,
-            tags: ["excited", "morning"],
+            tags: ["excited"],
           },
         }),
       })
@@ -365,9 +366,95 @@ describe("GraphQL Posts", () => {
       expect(body.data.createPost).toBeDefined()
       expect(body.data.createPost.id).toBeDefined()
       expect(body.data.createPost.duration).toBe(45)
-      expect(body.data.createPost.tags).toContain("excited")
+      expect(body.data.createPost.tags).toEqual(["excited"])
       expect(body.data.createPost.type).toBe("POST")
       expect(body.data.createPost.author.id).toBe(testUserId)
+    })
+
+    it("should reject post with no tags", async () => {
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            mutation CreatePost($audioKey: String!, $duration: PositiveInt!, $tags: [String!]) {
+              createPost(audioKey: $audioKey, duration: $duration, tags: $tags) {
+                id
+              }
+            }
+          `,
+          variables: {
+            audioKey: "audio/test/no-tags.webm",
+            duration: 30,
+          },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      expect(body.errors).toBeDefined()
+      expect(body.errors[0].message).toContain("exactly one sentiment tag")
+    })
+
+    it("should reject post with multiple tags", async () => {
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            mutation CreatePost($audioKey: String!, $duration: PositiveInt!, $tags: [String!]) {
+              createPost(audioKey: $audioKey, duration: $duration, tags: $tags) {
+                id
+              }
+            }
+          `,
+          variables: {
+            audioKey: "audio/test/multi-tags.webm",
+            duration: 30,
+            tags: ["grateful", "hopeful"],
+          },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      expect(body.errors).toBeDefined()
+      expect(body.errors[0].message).toContain("exactly one sentiment tag")
+    })
+
+    it("should reject post with invalid sentiment tag", async () => {
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            mutation CreatePost($audioKey: String!, $duration: PositiveInt!, $tags: [String!]) {
+              createPost(audioKey: $audioKey, duration: $duration, tags: $tags) {
+                id
+              }
+            }
+          `,
+          variables: {
+            audioKey: "audio/test/invalid-tag.webm",
+            duration: 30,
+            tags: ["not-a-valid-tag"],
+          },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      expect(body.errors).toBeDefined()
+      expect(body.errors[0].message).toContain("Invalid sentiment tag")
     })
   })
 

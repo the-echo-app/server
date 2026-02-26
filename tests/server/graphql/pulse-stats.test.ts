@@ -59,14 +59,14 @@ describe("GraphQL Pulse Stats", () => {
       {
         city: "singapore",
         period: "7d",
-        tag: "happy",
+        tag: "grateful",
         count: 35,
         percentage: 23.7,
       },
       {
         city: "singapore",
         period: "7d",
-        tag: "work",
+        tag: "anxious",
         count: 28,
         percentage: 18.9,
       },
@@ -80,7 +80,7 @@ describe("GraphQL Pulse Stats", () => {
       {
         city: "singapore",
         period: "30d",
-        tag: "happy",
+        tag: "grateful",
         count: 95,
         percentage: 22.2,
       },
@@ -94,7 +94,7 @@ describe("GraphQL Pulse Stats", () => {
       {
         city: "new-york",
         period: "7d",
-        tag: "tired",
+        tag: "exhausted",
         count: 40,
         percentage: 23.5,
       },
@@ -240,11 +240,11 @@ describe("GraphQL Pulse Stats", () => {
       expect(body.data.getPulseStats.city).toBe("new-york")
       expect(body.data.getPulseStats.tags).toHaveLength(2)
 
-      const tiredTag = body.data.getPulseStats.tags.find(
-        (t: any) => t.tag === "tired",
+      const exhaustedTag = body.data.getPulseStats.tags.find(
+        (t: any) => t.tag === "exhausted",
       )
-      expect(tiredTag).toBeDefined()
-      expect(tiredTag.count).toBe(40)
+      expect(exhaustedTag).toBeDefined()
+      expect(exhaustedTag.count).toBe(40)
     })
 
     it("should allow pulse stats with zero count and percentage", async () => {

@@ -47,7 +47,7 @@ describe("GraphQL Responses", () => {
       const parentPost = await createTestPost({
         userId: testUserId,
         city: "singapore",
-        tags: ["question"],
+        tags: ["curious"],
       })
 
       const response = await makeRequest(`${testServer.url}/graphql`, {
@@ -76,7 +76,7 @@ describe("GraphQL Responses", () => {
             parentId: parentPost.id,
             audioKey: "audio/test/response.webm",
             duration: 20,
-            tags: ["answer"],
+            tags: ["grateful"],
           },
         }),
       })
@@ -93,7 +93,7 @@ describe("GraphQL Responses", () => {
       expect(body.data.createResponse.type).toBe("RESPONSE")
       expect(body.data.createResponse.parentId).toBe(parentPost.id)
       expect(body.data.createResponse.duration).toBe(20)
-      expect(body.data.createResponse.tags).toContain("answer")
+      expect(body.data.createResponse.tags).toEqual(["grateful"])
     })
 
     it("should return correct response count after creating response", async () => {
@@ -276,7 +276,7 @@ describe("GraphQL Responses", () => {
         type: POST_TYPE.RESPONSE,
         parentId: parentPost.id,
         city: "singapore",
-        tags: ["response1"],
+        tags: ["hopeful"],
       })
 
       await createTestPost({
@@ -284,7 +284,7 @@ describe("GraphQL Responses", () => {
         type: POST_TYPE.RESPONSE,
         parentId: parentPost.id,
         city: "singapore",
-        tags: ["response2"],
+        tags: ["peaceful"],
       })
 
       const response = await makeRequest(`${testServer.url}/graphql`, {

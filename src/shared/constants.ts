@@ -89,6 +89,44 @@ export type NotificationType =
   (typeof NOTIFICATION_TYPE)[keyof typeof NOTIFICATION_TYPE]
 
 /**
+ * Valid sentiment tags for posts
+ */
+export const SENTIMENT_TAGS = [
+  "grateful",
+  "joyful",
+  "excited",
+  "hopeful",
+  "peaceful",
+  "proud",
+  "accomplished",
+  "inspired",
+  "loved",
+  "relieved",
+  "reflective",
+  "nostalgic",
+  "curious",
+  "confused",
+  "unsure",
+  "bored",
+  "numb",
+  "anxious",
+  "stressed",
+  "overwhelmed",
+  "frustrated",
+  "angry",
+  "sad",
+  "lonely",
+  "lost",
+  "guilty",
+  "ashamed",
+  "scared",
+  "exhausted",
+  "heartbroken",
+] as const
+
+export type SentimentTag = (typeof SENTIMENT_TAGS)[number]
+
+/**
  * Email verification settings
  */
 export const EMAIL_VERIFICATION_CODE_EXPIRY_MS = ONE_HOUR
