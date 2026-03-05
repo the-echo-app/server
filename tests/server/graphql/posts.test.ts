@@ -4,6 +4,7 @@ import {
   createTestPost,
   createTestUserWithProfile,
   setupTestDatabase,
+  updateTestPostCounts,
 } from "../../helpers/database"
 import { testLogger } from "../../helpers/logger"
 import {
@@ -149,6 +150,278 @@ describe("GraphQL Posts", () => {
       }
 
       expect(body.data.getPosts.posts.length).toBe(2)
+    })
+
+    it("should filter posts by a single tag", async () => {
+      await createTestPost({
+        userId: testUserId,
+        tags: ["grateful"],
+        city: "singapore",
+      })
+      await createTestPost({
+        userId: testUserId,
+        tags: ["stressed"],
+        city: "singapore",
+      })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetPosts($tags: [String!]) {
+              getPosts(tags: $tags) {
+                posts { id tags }
+              }
+            }
+          `,
+          variables: { tags: ["grateful"] },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getPosts.posts.length).toBe(1)
+      expect(body.data.getPosts.posts[0].tags).toEqual(["grateful"])
+    })
+
+    it("should filter posts by multiple tags", async () => {
+      await createTestPost({
+        userId: testUserId,
+        tags: ["grateful"],
+        city: "singapore",
+      })
+      await createTestPost({
+        userId: testUserId,
+        tags: ["stressed"],
+        city: "singapore",
+      })
+      await createTestPost({
+        userId: testUserId,
+        tags: ["hopeful"],
+        city: "singapore",
+      })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetPosts($tags: [String!]) {
+              getPosts(tags: $tags) {
+                posts { id tags }
+              }
+            }
+          `,
+          variables: { tags: ["grateful", "hopeful"] },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getPosts.posts.length).toBe(2)
+      const returnedTags = body.data.getPosts.posts.map((p: any) => p.tags[0])
+      expect(returnedTags).toContain("grateful")
+      expect(returnedTags).toContain("hopeful")
+    })
+
+    it("should return empty when no posts match tag filter", async () => {
+      await createTestPost({
+        userId: testUserId,
+        tags: ["grateful"],
+        city: "singapore",
+      })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetPosts($tags: [String!]) {
+              getPosts(tags: $tags) {
+                posts { id }
+              }
+            }
+          `,
+          variables: { tags: ["stressed"] },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getPosts.posts.length).toBe(0)
+    })
+
+    it("should sort posts by NEWEST (default)", async () => {
+      const post1 = await createTestPost({
+        userId: testUserId,
+        tags: ["grateful"],
+        city: "singapore",
+      })
+      await new Promise((r) => setTimeout(r, 10))
+      const post2 = await createTestPost({
+        userId: testUserId,
+        tags: ["hopeful"],
+        city: "singapore",
+      })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetPosts {
+              getPosts {
+                posts { id }
+              }
+            }
+          `,
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getPosts.posts[0].id).toBe(post2.id)
+      expect(body.data.getPosts.posts[1].id).toBe(post1.id)
+    })
+
+    it("should sort posts by OLDEST", async () => {
+      const post1 = await createTestPost({
+        userId: testUserId,
+        tags: ["grateful"],
+        city: "singapore",
+      })
+      await new Promise((r) => setTimeout(r, 10))
+      const post2 = await createTestPost({
+        userId: testUserId,
+        tags: ["hopeful"],
+        city: "singapore",
+      })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetPosts($sortBy: SortBy) {
+              getPosts(sortBy: $sortBy) {
+                posts { id }
+              }
+            }
+          `,
+          variables: { sortBy: "OLDEST" },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getPosts.posts[0].id).toBe(post1.id)
+      expect(body.data.getPosts.posts[1].id).toBe(post2.id)
+    })
+
+    it("should sort posts by MOST_RESPONSES", async () => {
+      const post1 = await createTestPost({
+        userId: testUserId,
+        tags: ["grateful"],
+        city: "singapore",
+      })
+      const post2 = await createTestPost({
+        userId: testUserId,
+        tags: ["hopeful"],
+        city: "singapore",
+      })
+      await updateTestPostCounts(post1.id, { responseCount: 5 })
+      await updateTestPostCounts(post2.id, { responseCount: 10 })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetPosts($sortBy: SortBy) {
+              getPosts(sortBy: $sortBy) {
+                posts { id responseCount }
+              }
+            }
+          `,
+          variables: { sortBy: "MOST_RESPONSES" },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getPosts.posts[0].id).toBe(post2.id)
+      expect(body.data.getPosts.posts[1].id).toBe(post1.id)
+    })
+
+    it("should sort posts by LEAST_RESPONSES", async () => {
+      const post1 = await createTestPost({
+        userId: testUserId,
+        tags: ["grateful"],
+        city: "singapore",
+      })
+      const post2 = await createTestPost({
+        userId: testUserId,
+        tags: ["hopeful"],
+        city: "singapore",
+      })
+      await updateTestPostCounts(post1.id, { responseCount: 10 })
+      await updateTestPostCounts(post2.id, { responseCount: 3 })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetPosts($sortBy: SortBy) {
+              getPosts(sortBy: $sortBy) {
+                posts { id responseCount }
+              }
+            }
+          `,
+          variables: { sortBy: "LEAST_RESPONSES" },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getPosts.posts[0].id).toBe(post2.id)
+      expect(body.data.getPosts.posts[1].id).toBe(post1.id)
     })
   })
 
@@ -320,6 +593,82 @@ describe("GraphQL Posts", () => {
       for (const post of body.data.getMyPosts.posts) {
         expect(post.author.id).toBe(testUserId)
       }
+    })
+
+    it("should sort my posts by MOST_RESPONSES", async () => {
+      const post1 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+      })
+      const post2 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+      })
+      await updateTestPostCounts(post1.id, { responseCount: 2 })
+      await updateTestPostCounts(post2.id, { responseCount: 8 })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetMyPosts($sortBy: SortBy) {
+              getMyPosts(sortBy: $sortBy) {
+                posts { id responseCount }
+              }
+            }
+          `,
+          variables: { sortBy: "MOST_RESPONSES" },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getMyPosts.posts[0].id).toBe(post2.id)
+      expect(body.data.getMyPosts.posts[1].id).toBe(post1.id)
+    })
+
+    it("should sort my posts by LEAST_RESPONSES", async () => {
+      const post1 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+      })
+      const post2 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+      })
+      await updateTestPostCounts(post1.id, { responseCount: 10 })
+      await updateTestPostCounts(post2.id, { responseCount: 1 })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetMyPosts($sortBy: SortBy) {
+              getMyPosts(sortBy: $sortBy) {
+                posts { id responseCount }
+              }
+            }
+          `,
+          variables: { sortBy: "LEAST_RESPONSES" },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getMyPosts.posts[0].id).toBe(post2.id)
+      expect(body.data.getMyPosts.posts[1].id).toBe(post1.id)
     })
   })
 

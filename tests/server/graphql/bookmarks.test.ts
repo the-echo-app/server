@@ -5,6 +5,7 @@ import {
   createTestPost,
   createTestUserWithProfile,
   setupTestDatabase,
+  updateTestPostCounts,
 } from "../../helpers/database"
 import { testLogger } from "../../helpers/logger"
 import {
@@ -446,6 +447,166 @@ describe("GraphQL Bookmarks", () => {
 
       expect(body.data.getMyBookmarks.posts.length).toBe(2)
       expect(body.data.getMyBookmarks.posts[0].id).toBe(post1.id)
+    })
+
+    it("should sort bookmarks by MOST_RESPONSES", async () => {
+      const post1 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+      })
+      const post2 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+      })
+      await updateTestPostCounts(post1.id, { responseCount: 3 })
+      await updateTestPostCounts(post2.id, { responseCount: 15 })
+      await createTestBookmark({ userId: testUserId, postId: post1.id })
+      await createTestBookmark({ userId: testUserId, postId: post2.id })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetMyBookmarks($sortBy: SortBy) {
+              getMyBookmarks(sortBy: $sortBy) {
+                posts { id responseCount }
+              }
+            }
+          `,
+          variables: { sortBy: "MOST_RESPONSES" },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getMyBookmarks.posts[0].id).toBe(post2.id)
+      expect(body.data.getMyBookmarks.posts[1].id).toBe(post1.id)
+    })
+
+    it("should sort bookmarks by LEAST_RESPONSES", async () => {
+      const post1 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+      })
+      const post2 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+      })
+      await updateTestPostCounts(post1.id, { responseCount: 20 })
+      await updateTestPostCounts(post2.id, { responseCount: 1 })
+      await createTestBookmark({ userId: testUserId, postId: post1.id })
+      await createTestBookmark({ userId: testUserId, postId: post2.id })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetMyBookmarks($sortBy: SortBy) {
+              getMyBookmarks(sortBy: $sortBy) {
+                posts { id responseCount }
+              }
+            }
+          `,
+          variables: { sortBy: "LEAST_RESPONSES" },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getMyBookmarks.posts[0].id).toBe(post2.id)
+      expect(body.data.getMyBookmarks.posts[1].id).toBe(post1.id)
+    })
+
+    it("should sort bookmarks by MOST_SAVED", async () => {
+      const post1 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+      })
+      const post2 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+      })
+      await updateTestPostCounts(post1.id, { bookmarkCount: 2 })
+      await updateTestPostCounts(post2.id, { bookmarkCount: 10 })
+      await createTestBookmark({ userId: testUserId, postId: post1.id })
+      await createTestBookmark({ userId: testUserId, postId: post2.id })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetMyBookmarks($sortBy: SortBy) {
+              getMyBookmarks(sortBy: $sortBy) {
+                posts { id bookmarkCount }
+              }
+            }
+          `,
+          variables: { sortBy: "MOST_SAVED" },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getMyBookmarks.posts[0].id).toBe(post2.id)
+      expect(body.data.getMyBookmarks.posts[1].id).toBe(post1.id)
+    })
+
+    it("should sort bookmarks by LEAST_SAVED", async () => {
+      const post1 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+      })
+      const post2 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+      })
+      await updateTestPostCounts(post1.id, { bookmarkCount: 15 })
+      await updateTestPostCounts(post2.id, { bookmarkCount: 1 })
+      await createTestBookmark({ userId: testUserId, postId: post1.id })
+      await createTestBookmark({ userId: testUserId, postId: post2.id })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetMyBookmarks($sortBy: SortBy) {
+              getMyBookmarks(sortBy: $sortBy) {
+                posts { id bookmarkCount }
+              }
+            }
+          `,
+          variables: { sortBy: "LEAST_SAVED" },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getMyBookmarks.posts[0].id).toBe(post2.id)
+      expect(body.data.getMyBookmarks.posts[1].id).toBe(post1.id)
     })
   })
 

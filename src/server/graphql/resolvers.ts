@@ -318,7 +318,7 @@ export function createResolvers(serverApp: ServerApp): Resolvers {
       },
 
       // Posts queries
-      getPosts: async (_, { city, tags, cursor, limit }, context) => {
+      getPosts: async (_, { city, tags, sortBy, cursor, limit }, context) => {
         return withSpan("graphql.Query.getPosts", context, async () => {
           try {
             const user = await getAuthenticatedUser(context)
@@ -326,6 +326,7 @@ export function createResolvers(serverApp: ServerApp): Resolvers {
               city: city || undefined,
               tags: tags || undefined,
               type: POST_TYPE.POST,
+              sortBy: (sortBy as SortBy) || "NEWEST",
               cursor: cursor || undefined,
               limit: limit || 20,
               viewerUserId: user.id,
@@ -410,28 +411,17 @@ export function createResolvers(serverApp: ServerApp): Resolvers {
         return withSpan("graphql.Query.getMyBookmarks", context, async () => {
           try {
             const user = await getAuthenticatedUser(context)
-            const bookmarksResult = await getUserBookmarks(serverApp.db, {
+            const result = await getUserBookmarks(serverApp.db, {
               userId: user.id,
-              sortBy: (sortBy as "NEWEST" | "OLDEST") || "NEWEST",
+              sortBy: (sortBy as SortBy) || "NEWEST",
               cursor: cursor || undefined,
               limit: limit || 20,
             })
 
-            // Fetch the actual posts for each bookmark
-            const postsWithAuthors = await Promise.all(
-              bookmarksResult.bookmarks.map((b) =>
-                getPostById(serverApp.db, b.postId, user.id),
-              ),
-            )
-
-            const validPosts = postsWithAuthors.filter(
-              (p): p is NonNullable<typeof p> => p !== undefined,
-            )
-
             return {
-              posts: validPosts.map(mapPostToSummary),
-              hasMore: bookmarksResult.hasMore,
-              nextCursor: bookmarksResult.nextCursor || null,
+              posts: result.posts.map(mapPostToSummary),
+              hasMore: result.hasMore,
+              nextCursor: result.nextCursor || null,
             }
           } catch (error) {
             if (error instanceof GraphQLError) throw error

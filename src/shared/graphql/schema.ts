@@ -212,7 +212,7 @@ export const typeDefs = gql`
     getProfileByUsername(username: String!): UserProfile @auth
 
     # Posts queries (returns PostSummary)
-    getPosts(city: String, tags: [String!], cursor: String, limit: PositiveInt): PostsConnection! @auth
+    getPosts(city: String, tags: [String!], sortBy: SortBy, cursor: String, limit: PositiveInt): PostsConnection! @auth
     getMyPosts(type: PostType, sortBy: SortBy, cursor: String, limit: PositiveInt): PostsConnection! @auth
     getUserPosts(userId: PositiveInt!, type: PostType, sortBy: SortBy, cursor: String, limit: PositiveInt): PostsConnection! @auth
     getMyBookmarks(sortBy: SortBy, cursor: String, limit: PositiveInt): PostsConnection! @auth

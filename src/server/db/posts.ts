@@ -134,7 +134,12 @@ export async function getPosts(
     }
 
     if (tags && tags.length > 0) {
-      conditions.push(sql`${posts.tags} ?| ${tags}`)
+      conditions.push(
+        sql`${posts.tags} ?| array[${sql.join(
+          tags.map((t) => sql`${t}`),
+          sql`, `,
+        )}]::text[]`,
+      )
     }
 
     // Handle cursor-based pagination

@@ -460,6 +460,28 @@ export async function createTestPost(postData: {
 }
 
 /**
+ * Update post counts directly in database (for testing sort order)
+ */
+export async function updateTestPostCounts(
+  postId: number,
+  counts: { responseCount?: number; bookmarkCount?: number },
+): Promise<void> {
+  const db = getTestDb()
+
+  const updates: Record<string, any> = { updatedAt: new Date() }
+  if (counts.responseCount !== undefined) {
+    updates.responseCount = counts.responseCount
+  }
+  if (counts.bookmarkCount !== undefined) {
+    updates.bookmarkCount = counts.bookmarkCount
+  }
+
+  await db.update(schema.posts).set(updates).where(sql`id = ${postId}`)
+
+  testLogger.info("📝 Test post counts updated:", { postId, ...counts })
+}
+
+/**
  * Update post status directly in database (for testing)
  */
 export async function updateTestPostStatus(

@@ -1,5 +1,12 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm"
-import { type Bookmark, bookmarks, type NewBookmark, posts } from "./schema"
+import type { PostWithAuthor, SortBy } from "./posts"
+import {
+  type Bookmark,
+  bookmarks,
+  type NewBookmark,
+  posts,
+  userProfiles,
+} from "./schema"
 import { type DatabaseOrTransaction, withTransaction } from "./shared"
 
 export type { Bookmark }
@@ -135,67 +142,138 @@ export async function removeBookmark(
   })
 }
 
-export type BookmarkSortBy = "NEWEST" | "OLDEST"
-
 export interface GetBookmarksOptions {
   userId: number
-  sortBy?: BookmarkSortBy
+  sortBy?: SortBy
   cursor?: string
   limit?: number
 }
 
 /**
- * Get user's bookmarks with pagination
+ * Get user's bookmarks with pagination, supporting sort by post-level fields
  */
 export async function getUserBookmarks(
   db: DatabaseOrTransaction,
   options: GetBookmarksOptions,
-): Promise<{ bookmarks: Bookmark[]; hasMore: boolean; nextCursor?: string }> {
+): Promise<{
+  posts: PostWithAuthor[]
+  hasMore: boolean
+  nextCursor?: string
+}> {
   return db.startSpan("db.bookmarks.getUserBookmarks", async () => {
     const { userId, sortBy = "NEWEST", cursor, limit = 20 } = options
 
-    const conditions = [eq(bookmarks.userId, userId)]
+    const conditions = [eq(bookmarks.userId, userId), eq(posts.active, true)]
 
-    // Handle cursor-based pagination
     if (cursor) {
       const [cursorValue, cursorId] = cursor.split(":")
       if (cursorValue && cursorId) {
         const cursorIdNum = parseInt(cursorId, 10)
-        if (sortBy === "NEWEST") {
-          conditions.push(
-            sql`(${bookmarks.createdAt}, ${bookmarks.id}) < (${new Date(cursorValue)}, ${cursorIdNum})`,
-          )
-        } else {
-          conditions.push(
-            sql`(${bookmarks.createdAt}, ${bookmarks.id}) > (${new Date(cursorValue)}, ${cursorIdNum})`,
-          )
+        switch (sortBy) {
+          case "NEWEST":
+            conditions.push(
+              sql`(${bookmarks.createdAt}, ${bookmarks.id}) < (${new Date(cursorValue)}, ${cursorIdNum})`,
+            )
+            break
+          case "OLDEST":
+            conditions.push(
+              sql`(${bookmarks.createdAt}, ${bookmarks.id}) > (${new Date(cursorValue)}, ${cursorIdNum})`,
+            )
+            break
+          case "MOST_RESPONSES":
+            conditions.push(
+              sql`(${posts.responseCount}, ${bookmarks.id}) < (${parseInt(cursorValue, 10)}, ${cursorIdNum})`,
+            )
+            break
+          case "LEAST_RESPONSES":
+            conditions.push(
+              sql`(${posts.responseCount}, ${bookmarks.id}) > (${parseInt(cursorValue, 10)}, ${cursorIdNum})`,
+            )
+            break
+          case "MOST_SAVED":
+            conditions.push(
+              sql`(${posts.bookmarkCount}, ${bookmarks.id}) < (${parseInt(cursorValue, 10)}, ${cursorIdNum})`,
+            )
+            break
+          case "LEAST_SAVED":
+            conditions.push(
+              sql`(${posts.bookmarkCount}, ${bookmarks.id}) > (${parseInt(cursorValue, 10)}, ${cursorIdNum})`,
+            )
+            break
         }
       }
     }
 
-    const orderBy =
-      sortBy === "OLDEST"
-        ? [asc(bookmarks.createdAt), asc(bookmarks.id)]
-        : [desc(bookmarks.createdAt), desc(bookmarks.id)]
+    let orderBy: any[]
+    switch (sortBy) {
+      case "OLDEST":
+        orderBy = [asc(bookmarks.createdAt), asc(bookmarks.id)]
+        break
+      case "MOST_RESPONSES":
+        orderBy = [desc(posts.responseCount), desc(bookmarks.id)]
+        break
+      case "LEAST_RESPONSES":
+        orderBy = [asc(posts.responseCount), asc(bookmarks.id)]
+        break
+      case "MOST_SAVED":
+        orderBy = [desc(posts.bookmarkCount), desc(bookmarks.id)]
+        break
+      case "LEAST_SAVED":
+        orderBy = [asc(posts.bookmarkCount), asc(bookmarks.id)]
+        break
+      case "NEWEST":
+      default:
+        orderBy = [desc(bookmarks.createdAt), desc(bookmarks.id)]
+    }
 
     const results = await db
-      .select()
+      .select({
+        bookmark: bookmarks,
+        post: posts,
+        author: {
+          id: userProfiles.id,
+          userId: userProfiles.userId,
+          username: userProfiles.username,
+          city: userProfiles.city,
+        },
+      })
       .from(bookmarks)
+      .innerJoin(posts, eq(bookmarks.postId, posts.id))
+      .innerJoin(userProfiles, eq(posts.userId, userProfiles.userId))
       .where(and(...conditions))
       .orderBy(...orderBy)
       .limit(limit + 1)
 
     const hasMore = results.length > limit
-    const bookmarksData = results.slice(0, limit)
+    const data = results.slice(0, limit)
+
+    const postsWithAuthors: PostWithAuthor[] = data.map((r) => ({
+      ...r.post,
+      author: r.author,
+      isBookmarked: true,
+    }))
 
     let nextCursor: string | undefined
-    if (hasMore && bookmarksData.length > 0) {
-      const lastBookmark = bookmarksData[bookmarksData.length - 1]!
-      nextCursor = `${lastBookmark.createdAt.toISOString()}:${lastBookmark.id}`
+    if (hasMore && data.length > 0) {
+      const last = data[data.length - 1]!
+      switch (sortBy) {
+        case "NEWEST":
+        case "OLDEST":
+          nextCursor = `${last.bookmark.createdAt.toISOString()}:${last.bookmark.id}`
+          break
+        case "MOST_RESPONSES":
+        case "LEAST_RESPONSES":
+          nextCursor = `${last.post.responseCount}:${last.bookmark.id}`
+          break
+        case "MOST_SAVED":
+        case "LEAST_SAVED":
+          nextCursor = `${last.post.bookmarkCount}:${last.bookmark.id}`
+          break
+      }
     }
 
     return {
-      bookmarks: bookmarksData,
+      posts: postsWithAuthors,
       hasMore,
       nextCursor,
     }
