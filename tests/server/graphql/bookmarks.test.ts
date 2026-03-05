@@ -608,6 +608,127 @@ describe("GraphQL Bookmarks", () => {
       expect(body.data.getMyBookmarks.posts[0].id).toBe(post2.id)
       expect(body.data.getMyBookmarks.posts[1].id).toBe(post1.id)
     })
+
+    it("should filter bookmarks by tags", async () => {
+      const post1 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+        tags: ["grateful"],
+      })
+      const post2 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+        tags: ["hopeful"],
+      })
+      await createTestBookmark({ userId: testUserId, postId: post1.id })
+      await createTestBookmark({ userId: testUserId, postId: post2.id })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetMyBookmarks($tags: [String!]) {
+              getMyBookmarks(tags: $tags) {
+                posts { id tags }
+              }
+            }
+          `,
+          variables: { tags: ["grateful"] },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getMyBookmarks.posts.length).toBe(1)
+      expect(body.data.getMyBookmarks.posts[0].tags).toContain("grateful")
+    })
+
+    it("should filter bookmarks by multiple tags", async () => {
+      const post1 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+        tags: ["grateful"],
+      })
+      const post2 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+        tags: ["hopeful"],
+      })
+      const post3 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+        tags: ["anxious"],
+      })
+      await createTestBookmark({ userId: testUserId, postId: post1.id })
+      await createTestBookmark({ userId: testUserId, postId: post2.id })
+      await createTestBookmark({ userId: testUserId, postId: post3.id })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetMyBookmarks($tags: [String!]) {
+              getMyBookmarks(tags: $tags) {
+                posts { id tags }
+              }
+            }
+          `,
+          variables: { tags: ["grateful", "hopeful"] },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getMyBookmarks.posts.length).toBe(2)
+      const ids = body.data.getMyBookmarks.posts.map((p: any) => p.id)
+      expect(ids).toContain(post1.id)
+      expect(ids).toContain(post2.id)
+    })
+
+    it("should return empty when no bookmarks match tag filter", async () => {
+      const post1 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+        tags: ["grateful"],
+      })
+      await createTestBookmark({ userId: testUserId, postId: post1.id })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetMyBookmarks($tags: [String!]) {
+              getMyBookmarks(tags: $tags) {
+                posts { id }
+              }
+            }
+          `,
+          variables: { tags: ["hopeful"] },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getMyBookmarks.posts.length).toBe(0)
+    })
   })
 
   describe("Authentication", () => {

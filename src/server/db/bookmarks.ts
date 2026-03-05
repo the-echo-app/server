@@ -144,6 +144,7 @@ export async function removeBookmark(
 
 export interface GetBookmarksOptions {
   userId: number
+  tags?: string[]
   sortBy?: SortBy
   cursor?: string
   limit?: number
@@ -161,9 +162,18 @@ export async function getUserBookmarks(
   nextCursor?: string
 }> {
   return db.startSpan("db.bookmarks.getUserBookmarks", async () => {
-    const { userId, sortBy = "NEWEST", cursor, limit = 20 } = options
+    const { userId, tags, sortBy = "NEWEST", cursor, limit = 20 } = options
 
     const conditions = [eq(bookmarks.userId, userId), eq(posts.active, true)]
+
+    if (tags && tags.length > 0) {
+      conditions.push(
+        sql`${posts.tags} ?| array[${sql.join(
+          tags.map((t) => sql`${t}`),
+          sql`, `,
+        )}]::text[]`,
+      )
+    }
 
     if (cursor) {
       const [cursorValue, cursorId] = cursor.split(":")

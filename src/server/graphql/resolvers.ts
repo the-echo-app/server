@@ -347,13 +347,14 @@ export function createResolvers(serverApp: ServerApp): Resolvers {
         })
       },
 
-      getMyPosts: async (_, { type, sortBy, cursor, limit }, context) => {
+      getMyPosts: async (_, { type, tags, sortBy, cursor, limit }, context) => {
         return withSpan("graphql.Query.getMyPosts", context, async () => {
           try {
             const user = await getAuthenticatedUser(context)
             const result = await getPosts(serverApp.db, {
               userId: user.id,
               type: type ? (type as any) : undefined,
+              tags: tags || undefined,
               sortBy: (sortBy as SortBy) || "NEWEST",
               cursor: cursor || undefined,
               limit: limit || 20,
@@ -407,12 +408,13 @@ export function createResolvers(serverApp: ServerApp): Resolvers {
         })
       },
 
-      getMyBookmarks: async (_, { sortBy, cursor, limit }, context) => {
+      getMyBookmarks: async (_, { tags, sortBy, cursor, limit }, context) => {
         return withSpan("graphql.Query.getMyBookmarks", context, async () => {
           try {
             const user = await getAuthenticatedUser(context)
             const result = await getUserBookmarks(serverApp.db, {
               userId: user.id,
+              tags: tags || undefined,
               sortBy: (sortBy as SortBy) || "NEWEST",
               cursor: cursor || undefined,
               limit: limit || 20,

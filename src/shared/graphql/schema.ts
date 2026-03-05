@@ -213,9 +213,9 @@ export const typeDefs = gql`
 
     # Posts queries (returns PostSummary)
     getPosts(city: String, tags: [String!], sortBy: SortBy, cursor: String, limit: PositiveInt): PostsConnection! @auth
-    getMyPosts(type: PostType, sortBy: SortBy, cursor: String, limit: PositiveInt): PostsConnection! @auth
+    getMyPosts(type: PostType, tags: [String!], sortBy: SortBy, cursor: String, limit: PositiveInt): PostsConnection! @auth
     getUserPosts(userId: PositiveInt!, type: PostType, sortBy: SortBy, cursor: String, limit: PositiveInt): PostsConnection! @auth
-    getMyBookmarks(sortBy: SortBy, cursor: String, limit: PositiveInt): PostsConnection! @auth
+    getMyBookmarks(tags: [String!], sortBy: SortBy, cursor: String, limit: PositiveInt): PostsConnection! @auth
 
     # Post detail (returns full Post with audioUrl)
     getPostById(id: PositiveInt!): Post @auth

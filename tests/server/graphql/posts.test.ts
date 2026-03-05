@@ -670,6 +670,121 @@ describe("GraphQL Posts", () => {
       expect(body.data.getMyPosts.posts[0].id).toBe(post2.id)
       expect(body.data.getMyPosts.posts[1].id).toBe(post1.id)
     })
+
+    it("should filter my posts by tags", async () => {
+      await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+        tags: ["grateful"],
+      })
+      await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+        tags: ["hopeful"],
+      })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetMyPosts($tags: [String!]) {
+              getMyPosts(tags: $tags) {
+                posts { id tags }
+              }
+            }
+          `,
+          variables: { tags: ["grateful"] },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getMyPosts.posts.length).toBe(1)
+      expect(body.data.getMyPosts.posts[0].tags).toContain("grateful")
+    })
+
+    it("should filter my posts by multiple tags", async () => {
+      const post1 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+        tags: ["grateful"],
+      })
+      const post2 = await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+        tags: ["hopeful"],
+      })
+      await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+        tags: ["anxious"],
+      })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetMyPosts($tags: [String!]) {
+              getMyPosts(tags: $tags) {
+                posts { id tags }
+              }
+            }
+          `,
+          variables: { tags: ["grateful", "hopeful"] },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getMyPosts.posts.length).toBe(2)
+      const ids = body.data.getMyPosts.posts.map((p: any) => p.id)
+      expect(ids).toContain(post1.id)
+      expect(ids).toContain(post2.id)
+    })
+
+    it("should return empty when no posts match tag filter", async () => {
+      await createTestPost({
+        userId: testUserId,
+        city: "singapore",
+        tags: ["grateful"],
+      })
+
+      const response = await makeRequest(`${testServer.url}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query GetMyPosts($tags: [String!]) {
+              getMyPosts(tags: $tags) {
+                posts { id }
+              }
+            }
+          `,
+          variables: { tags: ["hopeful"] },
+        }),
+      })
+
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      if (body.errors) throw new Error(body.errors[0].message)
+
+      expect(body.data.getMyPosts.posts.length).toBe(0)
+    })
   })
 
   describe("createPost", () => {
